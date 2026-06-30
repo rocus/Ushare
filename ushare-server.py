@@ -25,8 +25,12 @@ SSDP_PORT     = 1900
 URL_BASE      = f"http://{config.SERVER_IP}:{config.HTTP_PORT}/"
 LOCATION      = f"{URL_BASE}description.xml"
 
+# =========================================================
+# GENERAL INFORMATION
+# =========================================================
+
 def print_info():
-    VERSION= "1.01"
+    VERSION= "1.02"
     print(f"NAME : {config.FRIENDLY_NAME} \nURL_BASE:{URL_BASE} \nMEDIA ROOT : {config.MEDIA_ROOT} \nUUID:  {config.UUID} \nVersion: {VERSION}")
     count = 0
     for root, dirs, files in os.walk(config.MEDIA_ROOT):
@@ -36,6 +40,26 @@ def print_info():
     print(f"Number of files available: {count}")
     print(60*"=")
 
+# =========================================================
+# FILETYPE DEFINITIONS
+# =========================================================
+
+MUSIC    = "object.item.audioItem.musicTrack"
+PHOTO    = "object.item.imageItem.photo"
+PLAYLIST = "object.item.playlistItem"
+
+FILE_TYPES = {
+    ".mp3" : ("audio/mpeg"    , MUSIC   ),
+    ".flac": ("audio/flac"    , MUSIC   ),
+    ".wav" : ("audio/wav"     , MUSIC   ),
+    ".ogg" : ("audio/ogg"     , MUSIC   ),
+    ".wma" : ("audio/x-ms-wma", MUSIC   ),
+    ".pls" : ("audio/x-scpls" , PLAYLIST),
+    ".m3u" : ("audio/mpegurl" , PLAYLIST),
+    ".jpg" : ("image/jpeg"    , PHOTO   ),
+    ".jpeg": ("image/jpeg"    , PHOTO   ),
+    ".png" : ("image/png"     , PHOTO   )
+}
 
 # =========================================================
 # GLOBAL REQUEST LOGGING
@@ -635,181 +659,181 @@ async def cds_xml(request):
     print("📄CDS.XML requested",request)
     xml = f"""<?xml version="1.0" encoding="utf-8"?>
 <scpd xmlns="urn:schemas-upnp-org:service-1-0">
-<specVersion>
-<major>1</major>
-<minor>0</minor>
-</specVersion>
-<actionList>
-<action>
-<name>Browse</name>
-<argumentList>
-<argument>
-<name>ObjectID</name>
-<direction>in</direction>
-<relatedStateVariable>A_ARG_TYPE_ObjectID</relatedStateVariable>
-</argument>
-<argument>
-<name>BrowseFlag</name>
-<direction>in</direction>
-<relatedStateVariable>A_ARG_TYPE_BrowseFlag</relatedStateVariable>
-</argument>
-<argument>
-<name>Filter</name>
-<direction>in</direction>
-<relatedStateVariable>A_ARG_TYPE_Filter</relatedStateVariable>
-</argument>
-<argument>
-<name>StartingIndex</name>
-<direction>in</direction>
-<relatedStateVariable>A_ARG_TYPE_Index</relatedStateVariable>
-</argument>
-<argument>
-<name>RequestedCount</name>
-<direction>in</direction>
-<relatedStateVariable>A_ARG_TYPE_Count</relatedStateVariable>
-</argument>
-<argument>
-<name>SortCriteria</name>
-<direction>in</direction>
-<relatedStateVariable>A_ARG_TYPE_SortCriteria</relatedStateVariable>
-</argument>
-<argument>
-<name>Result</name>
-<direction>out</direction>
-<relatedStateVariable>A_ARG_TYPE_Result</relatedStateVariable>
-</argument>
-<argument>
-<name>NumberReturned</name>
-<direction>out</direction>
-<relatedStateVariable>A_ARG_TYPE_Count</relatedStateVariable>
-</argument>
-<argument>
-<name>TotalMatches</name>
-<direction>out</direction>
-<relatedStateVariable>A_ARG_TYPE_Count</relatedStateVariable>
-</argument>
-<argument>
-<name>UpdateID</name>
-<direction>out</direction>
-<relatedStateVariable>A_ARG_TYPE_UpdateID</relatedStateVariable>
-</argument>
-</argumentList>
-</action>
-<action>
-<name>DestroyObject</name>
-<argumentList>
-<argument>
-<name>ObjectID</name>
-<direction>in</direction>
-<relatedStateVariable>A_ARG_TYPE_ObjectID</relatedStateVariable>
-</argument>
-</argumentList>
-</action>
-<action>
-<name>GetSystemUpdateID</name>
-<argumentList>
-<argument>
-<name>Id</name>
-<direction>out</direction>
-<relatedStateVariable>SystemUpdateID</relatedStateVariable>
-</argument>
-</argumentList>
-</action>
-<action>
-<name>GetSearchCapabilities</name>
-<argumentList>
-<argument>
-<name>SearchCaps</name>
-<direction>out</direction>
-<relatedStateVariable>SearchCapabilities</relatedStateVariable>
-</argument>
-</argumentList>
-</action>
-<action>
-<name>GetSortCapabilities</name>
-<argumentList>
-<argument>
-<name>SortCaps</name>
-<direction>out</direction>
-<relatedStateVariable>SortCapabilities</relatedStateVariable>
-</argument>
-</argumentList>
-</action>
-<action>
-<name>UpdateObject</name>
-<argumentList>
-<argument>
-<name>ObjectID</name>
-<direction>in</direction>
-<relatedStateVariable>A_ARG_TYPE_ObjectID</relatedStateVariable>
-</argument>
-<argument>
-<name>CurrentTagValue</name>
-<direction>in</direction>
-<relatedStateVariable>A_ARG_TYPE_TagValueList</relatedStateVariable>
-</argument>
-<argument>
-<name>NewTagValue</name>
-<direction>in</direction>
-<relatedStateVariable>A_ARG_TYPE_TagValueList</relatedStateVariable>
-</argument>
-</argumentList>
-</action>
-</actionList>
-<serviceStateTable>
-<stateVariable sendEvents="no">
-<name>A_ARG_TYPE_BrowseFlag</name>
-<dataType>string</dataType>
-<allowedValueList>
-<allowedValue>BrowseMetadata</allowedValue>
-<allowedValue>BrowseDirectChildren</allowedValue>
-</allowedValueList>
-</stateVariable>
-<stateVariable sendEvents="yes">
-<name>SystemUpdateID</name>
-<dataType>ui4</dataType>
-</stateVariable>
-<stateVariable sendEvents="no">
-<name>A_ARG_TYPE_Count</name>
-<dataType>ui4</dataType>
-</stateVariable>
-<stateVariable sendEvents="no">
-<name>A_ARG_TYPE_SortCriteria</name>
-<dataType>string</dataType>
-</stateVariable>
-<stateVariable sendEvents="no">
-<name>SortCapabilities</name>
-<dataType>string</dataType>
-</stateVariable>
-<stateVariable sendEvents="no">
-<name>A_ARG_TYPE_Index</name>
-<dataType>ui4</dataType>
-</stateVariable>
-<stateVariable sendEvents="no">
-<name>A_ARG_TYPE_ObjectID</name>
-<dataType>string</dataType>
-</stateVariable>
-<stateVariable sendEvents="no">
-<name>A_ARG_TYPE_UpdateID</name>
-<dataType>ui4</dataType>
-</stateVariable>
-<stateVariable sendEvents="no">
-<name>A_ARG_TYPE_TagValueList</name>
-<dataType>string</dataType>
-</stateVariable>
-<stateVariable sendEvents="no">
-<name>A_ARG_TYPE_Result</name>
-<dataType>string</dataType>
-</stateVariable>
-<stateVariable sendEvents="no">
-<name>SearchCapabilities</name>
-<dataType>string</dataType>
-</stateVariable>
-<stateVariable sendEvents="no">
-<name>A_ARG_TYPE_Filter</name>
-<dataType>string</dataType>
-</stateVariable>
-</serviceStateTable>
+   <specVersion>
+      <major>1</major>
+      <minor>0</minor>
+   </specVersion>
+   <actionList>
+      <action>
+         <name>Browse</name>
+         <argumentList>
+            <argument>
+               <name>ObjectID</name>
+               <direction>in</direction>
+               <relatedStateVariable>A_ARG_TYPE_ObjectID</relatedStateVariable>
+            </argument>
+            <argument>
+               <name>BrowseFlag</name>
+               <direction>in</direction>
+               <relatedStateVariable>A_ARG_TYPE_BrowseFlag</relatedStateVariable>
+            </argument>
+            <argument>
+               <name>Filter</name>
+               <direction>in</direction>
+               <relatedStateVariable>A_ARG_TYPE_Filter</relatedStateVariable>
+            </argument>
+            <argument>
+               <name>StartingIndex</name>
+               <direction>in</direction>
+               <relatedStateVariable>A_ARG_TYPE_Index</relatedStateVariable>
+            </argument>
+            <argument>
+               <name>RequestedCount</name>
+               <direction>in</direction>
+               <relatedStateVariable>A_ARG_TYPE_Count</relatedStateVariable>
+            </argument>
+            <argument>
+               <name>SortCriteria</name>
+               <direction>in</direction>
+               <relatedStateVariable>A_ARG_TYPE_SortCriteria</relatedStateVariable>
+            </argument>
+            <argument>
+               <name>Result</name>
+               <direction>out</direction>
+               <relatedStateVariable>A_ARG_TYPE_Result</relatedStateVariable>
+            </argument>
+            <argument>
+               <name>NumberReturned</name>
+               <direction>out</direction>
+               <relatedStateVariable>A_ARG_TYPE_Count</relatedStateVariable>
+            </argument>
+            <argument>
+               <name>TotalMatches</name>
+               <direction>out</direction>
+               <relatedStateVariable>A_ARG_TYPE_Count</relatedStateVariable>
+            </argument>
+            <argument>
+               <name>UpdateID</name>
+               <direction>out</direction>
+               <relatedStateVariable>A_ARG_TYPE_UpdateID</relatedStateVariable>
+            </argument>
+         </argumentList>
+      </action>
+      <action>
+         <name>DestroyObject</name>
+         <argumentList>
+            <argument>
+               <name>ObjectID</name>
+               <direction>in</direction>
+               <relatedStateVariable>A_ARG_TYPE_ObjectID</relatedStateVariable>
+            </argument>
+         </argumentList>
+      </action>
+      <action>
+         <name>GetSystemUpdateID</name>
+         <argumentList>
+            <argument>
+               <name>Id</name>
+               <direction>out</direction>
+               <relatedStateVariable>SystemUpdateID</relatedStateVariable>
+            </argument>
+         </argumentList>
+      </action>
+      <action>
+         <name>GetSearchCapabilities</name>
+         <argumentList>
+            <argument>
+               <name>SearchCaps</name>
+               <direction>out</direction>
+               <relatedStateVariable>SearchCapabilities</relatedStateVariable>
+            </argument>
+         </argumentList>
+      </action>
+      <action>
+         <name>GetSortCapabilities</name>
+         <argumentList>
+            <argument>
+               <name>SortCaps</name>
+               <direction>out</direction>
+               <relatedStateVariable>SortCapabilities</relatedStateVariable>
+            </argument>
+         </argumentList>
+      </action>
+      <action>
+         <name>UpdateObject</name>
+         <argumentList>
+            <argument>
+               <name>ObjectID</name>
+               <direction>in</direction>
+               <relatedStateVariable>A_ARG_TYPE_ObjectID</relatedStateVariable>
+            </argument>
+            <argument>
+               <name>CurrentTagValue</name>
+               <direction>in</direction>
+               <relatedStateVariable>A_ARG_TYPE_TagValueList</relatedStateVariable>
+            </argument>
+            <argument>
+               <name>NewTagValue</name>
+               <direction>in</direction>
+               <relatedStateVariable>A_ARG_TYPE_TagValueList</relatedStateVariable>
+            </argument>
+         </argumentList>
+      </action>
+   </actionList>
+   <serviceStateTable>
+      <stateVariable sendEvents="no">
+         <name>A_ARG_TYPE_BrowseFlag</name>
+         <dataType>string</dataType>
+         <allowedValueList>
+            <allowedValue>BrowseMetadata</allowedValue>
+            <allowedValue>BrowseDirectChildren</allowedValue>
+         </allowedValueList>
+      </stateVariable>
+      <stateVariable sendEvents="yes">
+         <name>SystemUpdateID</name>
+         <dataType>ui4</dataType>
+      </stateVariable>
+      <stateVariable sendEvents="no">
+         <name>A_ARG_TYPE_Count</name>
+         <dataType>ui4</dataType>
+      </stateVariable>
+      <stateVariable sendEvents="no">
+         <name>A_ARG_TYPE_SortCriteria</name>
+         <dataType>string</dataType>
+      </stateVariable>
+      <stateVariable sendEvents="no">
+         <name>SortCapabilities</name>
+         <dataType>string</dataType>
+      </stateVariable>
+      <stateVariable sendEvents="no">
+         <name>A_ARG_TYPE_Index</name>
+         <dataType>ui4</dataType>
+      </stateVariable>
+      <stateVariable sendEvents="no">
+         <name>A_ARG_TYPE_ObjectID</name>
+         <dataType>string</dataType>
+      </stateVariable>
+      <stateVariable sendEvents="no">
+         <name>A_ARG_TYPE_UpdateID</name>
+         <dataType>ui4</dataType>
+      </stateVariable>
+      <stateVariable sendEvents="no">
+         <name>A_ARG_TYPE_TagValueList</name>
+         <dataType>string</dataType>
+      </stateVariable>
+      <stateVariable sendEvents="no">
+         <name>A_ARG_TYPE_Result</name>
+         <dataType>string</dataType>
+      </stateVariable>
+      <stateVariable sendEvents="no">
+         <name>SearchCapabilities</name>
+         <dataType>string</dataType>
+      </stateVariable>
+      <stateVariable sendEvents="no">
+         <name>A_ARG_TYPE_Filter</name>
+         <dataType>string</dataType>
+      </stateVariable>
+   </serviceStateTable>
 </scpd>"""
     return web.Response(text=xml, content_type="text/xml")
 
@@ -872,61 +896,31 @@ def list_directory(object_id):
                     "file"  : full
                 })
             # ------------------------
-            # FILE (MUSIC)
+            # FILE 
             # ------------------------
-            elif os.path.isfile(full) and entry.lower().endswith((".mp3", ".m4a", ".flac", ".wav")):
-                if entry.lower().endswith(".mp3"):
-                    mime = "audio/mpeg"
-                elif entry.lower().endswith(".wav"):
-                    mime = "audio/wav"
+
+            elif os.path.isfile(full):
+                size  = os.path.getsize(full)
+
+                ext = os.path.splitext(filename)[1].lower()
+                try:
+                    mime, upnp_class = FILE_TYPES[ext]
+                except KeyError:
+                    print ("UNKNOWN FILE TYPE: "+ full)
+                    return
 
                 items.append({
                     "id"    : child_id,
                     "title" : entry,
-                    "class" : "object.item.audioItem.musicTrack",
+                    "class" : upnp_class,
                     "file"  : full,
                     "mime"  : mime,
-                    "size"  : os.path.getsize(full),
+                    "size"  : size,
                     "artist": "",
                     "album" : ""
                 })
-            # ------------------------
-            # FILE (PLAYLIST)
-            # ------------------------
-            elif os.path.isfile(full) and entry.lower().endswith((".pls",".m3u")):
-                if entry.lower().endswith(".pls"):
-                    mime = "audio/x-scpls"
-                elif entry.lower().endswith(".m3u"):
-                    mime = "audio/mpegurl"
-
-                items.append({
-                    "id"    : child_id,
-                    "title" : entry,
-                    "class" : "object.item.playlistItem",
-                    "file"  : full,
-                    "mime"  : mime
-                })
-            # ------------------------
-            # FILE PHOTO
-            # ------------------------
-            elif os.path.isfile(full) and entry.lower().endswith((".jpg",".jpeg")):
-                if entry.lower().endswith(".jpg"):
-                    mime = "image/jpeg"
-                elif entry.lower().endswith(".jpeg"):
-                    mime = "image/jpeg"
-
-                items.append({
-                    "id"    : child_id,
-                    "title" : entry,
-                    "class" : "object.item.imageItem.photo",
-                    "file"  : full,
-                    "mime"  : mime
-                })
-
             else:
-               print ("UNKNOWN FILE TYPE: "+ full)
-               pass
-
+                print ("NOT A FILE OR DIRECTORY?")
     except Exception as e:
         print("Filesystem error:", e)
     print ("Valid items",len(items))
