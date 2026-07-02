@@ -40,6 +40,7 @@ def print_info():
     print(f"Number of files available: {count}")
     print(60*"=")
 
+
 # =========================================================
 # FILETYPE DEFINITIONS
 # =========================================================
@@ -47,6 +48,7 @@ def print_info():
 MUSIC    = "object.item.audioItem.musicTrack"
 PHOTO    = "object.item.imageItem.photo"
 PLAYLIST = "object.item.playlistItem"
+FOLDER   = "object.container.storageFolder"
 
 FILE_TYPES = {
     ".mp3" : ("audio/mpeg"    , MUSIC   ),
@@ -60,6 +62,7 @@ FILE_TYPES = {
     ".jpeg": ("image/jpeg"    , PHOTO   ),
     ".png" : ("image/png"     , PHOTO   )
 }
+
 
 # =========================================================
 # GLOBAL REQUEST LOGGING
@@ -77,7 +80,6 @@ async def log_requests(request, handler):
     except Exception as e:
         print("❌ ERROR:", e)
         raise
-
 
 
 # ===============================================================
@@ -135,6 +137,7 @@ def ssdp_notify():
         sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 2)
         sock.sendto(msg.encode(), (SSDP_ADDR, SSDP_PORT))
 
+
 # =========================================================
 # SSDP (DISCOVERY)
 # =========================================================
@@ -147,6 +150,7 @@ def ssdp_loop():
         now = datetime.datetime.now()
         print(now.strftime("%Y-%m-%d %H:%M:%S"))
         time.sleep(30)
+
 
 # =========================================================
 # SSDP LISTENER
@@ -194,8 +198,9 @@ def ssdp_listener():
 
         sock.sendto(reply.encode(), addr)
 
+
 # =========================================================
-# SOAP PARSER (ROBUST)
+# SOAP PARSER 
 # =========================================================
 
 def parse_browse(xml_body):
@@ -245,6 +250,7 @@ def parse_browse(xml_body):
     except Exception as e:
         print("PARSE ERROR:", e)
         return None, None
+
 
 #============================================================
 # Catch ALL
@@ -456,6 +462,7 @@ async def msr_xml(request):
 </scpd>"""
     return web.Response(text=xml, content_type="text/xml")
 
+
 #=========================================================
 # MSR CONTROL
 #=========================================================
@@ -486,6 +493,7 @@ async def msr_event(request):
         "TIMEOUT": "Second-1800"
     }       
     return web.Response(status=200, headers=headers)
+
 
 # ==================================================
 # CMS XML
@@ -627,6 +635,7 @@ async def cms_xml(request):
 </scpd>"""
     return web.Response(text=xml, content_type="text/xml")
 
+
 #=========================================================
 # CMS CONTROL
 #=========================================================
@@ -637,6 +646,7 @@ async def cms_control(request):
     print(body)
     return web.Response(text="soap_ok",
                         content_type="text/xml")
+
 
 #=========================================================
 # CMS EVENT
@@ -650,6 +660,7 @@ async def cms_event(request):
         "TIMEOUT": "Second-1800"
     }
     return web.Response(status=200, headers=headers)
+
 
 # =========================================================
 # CDS XML (SERVICE DEFINITION)
@@ -853,6 +864,7 @@ def normalize_object_id(object_id):
 
     return object_id
 
+
 # ---------------------------------------------------------
 # OBJECT ID → FILESYSTEM PATH
 # ---------------------------------------------------------
@@ -862,6 +874,7 @@ def get_path(object_id):
     if object_id == "0":
         return config.MEDIA_ROOT
     return os.path.join(config.MEDIA_ROOT, object_id)
+
 
 # ---------------------------------------------------------
 # LIST DIRECTORY AND FILES
@@ -892,7 +905,7 @@ def list_directory(object_id):
                 items.append({
                     "id"    : child_id,
                     "title" : entry,
-                    "class" : "object.container.storageFolder",
+                    "class" : FOLDER,
                     "file"  : full
                 })
             # ------------------------
@@ -900,25 +913,18 @@ def list_directory(object_id):
             # ------------------------
 
             elif os.path.isfile(full):
-                size  = os.path.getsize(full)
-
-                ext = os.path.splitext(filename)[1].lower()
+                ext  = os.path.splitext(entry)[1].lower()
                 try:
                     mime, upnp_class = FILE_TYPES[ext]
+                    items.append({
+                        "id"    : child_id,
+                        "title" : entry,
+                        "class" : upnp_class,
+                        "file"  : full,
+                        "mime"  : mime
+                    })
                 except KeyError:
                     print ("UNKNOWN FILE TYPE: "+ full)
-                    return
-
-                items.append({
-                    "id"    : child_id,
-                    "title" : entry,
-                    "class" : upnp_class,
-                    "file"  : full,
-                    "mime"  : mime,
-                    "size"  : size,
-                    "artist": "",
-                    "album" : ""
-                })
             else:
                 print ("NOT A FILE OR DIRECTORY?")
     except Exception as e:
@@ -954,79 +960,55 @@ def build_didl(items, parent_id, request_host):
         it_title = xml_escape( it['title'])
         url_path = quote(it["id"], safe="/")
         res_url  = f"http://{request_host}/media/{url_path}"
-        title    = ""
-        artist   = ""
-        album    = ""
 
         # ------------------------
         # FOLDER
         # ------------------------
-        if it_class == "object.container.storageFolder":
-#           print("RESURL Directory ",res_url)
+        if it_class == FOLDER:
+            print("RESURL Directory ",res_url)
             child_count = len(os.listdir(it["file"]))
-            xml += f"""
-  <container id="{it_id}" parentID="{safe_parent_id}" restricted="0" childCount="{child_count}">
-    <dc:title>{it_title}</dc:title>
-    <upnp:class>{it_class}</upnp:class>
-  </container>
-"""
+            xml += f""" <container id="{it_id}" parentID="{safe_parent_id}" restricted="0" childCount="{child_count}">
+                           <dc:title>{it_title}</dc:title>
+                           <upnp:class>{it_class}</upnp:class>
+                        </container> """
 
         # ------------------------
         # FILE
         # ------------------------
-        elif it_class == "object.item.audioItem.musicTrack":
-#           print("RESURL FILE   ",res_url)
+        elif it_class in (MUSIC, PLAYLIST, PHOTO):
+            print("RESURL FILE   ",res_url)
 
-            from mutagen.easyid3 import EasyID3
-            from mutagen.id3 import ID3NoHeaderError
-             
-            try:
-                audio  = EasyID3(it["file"])
-                title  = xml_escape(audio.get("title",  [it_title])[0])
-                artist = xml_escape(audio.get("artist", [""])[0])
-                album  = xml_escape(audio.get("album",  [""])[0])
-            except ID3NoHeaderError:
-                pass
-            xml += f"""
-  <item id="{it_id}" parentID="{safe_parent_id}" restricted="1">
-    <dc:title>{it_title}</dc:title>
-    <upnp:class>{it_class}</upnp:class>
-    <upnp:title>{title}</upnp:title>
-    <upnp:artist>{artist}</upnp:artist>
-    <upnp:album>{album}</upnp:album>
-    <res protocolInfo="http-get:*:{it['mime']}:*" size="{it['size']}">{res_url}</res>
-  </item>
-"""
-        # ------------------------
-        # PLAYLIST
-        # ------------------------
-        elif it_class == "object.item.playlistItem":
-#           print("RESURL PLAYLIST ",res_url)
-            xml += f"""
-  <item id="{it_id}" parentID="{safe_parent_id}" restricted="0">
-    <dc:title>{it_title}</dc:title>
-    <upnp:class>{it_class}</upnp:class>
-    <res protocolInfo="http-get:*:{it['mime']}:*">{res_url}</res>
-  </item>
-"""
-        # ------------------------
-        # PHOTO
-        # ------------------------
-        elif it_class == "object.item.imageItem.photo":
-#           print("RESURL PHOTO    ",res_url)
-            xml += f"""
-  <item id="{it_id}" parentID="{safe_parent_id}" restricted="0">
-    <dc:title>{it_title}</dc:title>
-    <upnp:class>{it_class}</upnp:class>
-    <res protocolInfo="http-get:*:{it['mime']}:*">{res_url}</res>
-  </item>
-"""
+            if it_class == MUSIC:
+                from mutagen.easyid3 import EasyID3
+                from mutagen.id3 import ID3NoHeaderError
+                title    = ""
+                artist   = ""
+                album    = ""
+                try:
+                    audio  = EasyID3(it["file"])
+                    title  = xml_escape(audio.get("title",  [it_title])[0])
+                    artist = xml_escape(audio.get("artist", [""])[0])
+                    album  = xml_escape(audio.get("album",  [""])[0])
+                except ID3NoHeaderError:
+                    pass
+                ins_size = f""" size="{os.path.getsize(it['file'])} " """ 
+                ins_tags = f""" <upnp:title>{title}</upnp:title>
+                                <upnp:artist>{artist}</upnp:artist>
+                                <upnp:album>{album}</upnp:album> """
+
+            xml += f""" <item id="{it_id}" parentID="{safe_parent_id}" restricted="1">
+                           <dc:title>{it_title}</dc:title>
+                           <upnp:class>{it_class}</upnp:class>
+                           {ins_tags}
+                           <res protocolInfo="http-get:*:{it['mime']}:*" {ins_size} >{res_url}</res>
+                        </item> """
         else:
-            print ( "THIS SHOULD NOT HAPPEN, mimetype not implemented",it["class"])
+            print ( "THIS SHOULD NOT HAPPEN")
 
     xml += "</DIDL-Lite>"
 #   print (xml)
     return xml
+
 
 # ---------------------------------------------------------
 #  CDS CONTROL
@@ -1136,15 +1118,6 @@ async def cds_event(request):
 """
 subscriptions = {}
 
-def del_timeouts():
-    for i in subscriptions:
-        print ("SUBSCRIPTIONS ", i,  subscriptions[i])
-    now = time.time()
-    for i in list(subscriptions):
-        if subscriptions[i]["expires"] < now:
-            print ("EXPIRED SUBSCRIPTION DELETED ", i )
-            del subscriptions[i]
-
 async def cds_event(request):
     print("CDS EVENT")
 #   print("METHOD:", request.method)
@@ -1155,7 +1128,13 @@ async def cds_event(request):
     sid  = request.headers.get("SID")
     print ("SID ", sid)
 
-    del_timeouts()
+    for i in subscriptions:
+        print ("SUBSCRIPTIONS ", i,  subscriptions[i])
+    now = time.time()
+    for i in list(subscriptions):
+        if subscriptions[i]["expires"] < now:
+            print ("EXPIRED SUBSCRIPTION DELETED ", i )
+            del subscriptions[i]
     if request.method == "UNSUBSCRIBE":
         sid = request.headers.get("SID")
 
@@ -1192,6 +1171,7 @@ async def cds_event(request):
                 "TIMEOUT": "Second-1800"
             }
         )
+
 # =========================================================
 # MEDIA HANDLER
 # =========================================================
