@@ -1,3 +1,4 @@
+import logging 
 import uuid
 import html
 import os
@@ -15,6 +16,7 @@ def read_parameters():
     parser.add_argument("-n", "--name", dest="FRIENDLY_NAME",type=str, default="UshareNG")
     parser.add_argument("-u", "--uuid", dest="UUID",         type=str, default=str(uuid.uuid4()))
     parser.add_argument("-t", "--ttl" , dest="SSDP_TTL",     type=int, default=1800)
+    parser.add_argument("-d", "--log" , dest="LOGLEVEL",     choices=["DEBUG", "INFO", "WARNING", "ERROR"], default="INFO")
     return parser.parse_args()
 
 config = read_parameters()
@@ -24,20 +26,32 @@ SSDP_ADDR     = "239.255.255.250"
 SSDP_PORT     = 1900
 URL_BASE      = f"http://{config.SERVER_IP}:{config.HTTP_PORT}/"
 LOCATION      = f"{URL_BASE}description.xml"
+VERSION       = "1.02"
+
+
+logging.basicConfig( level=getattr(logging, config.LOGLEVEL), format="%(levelname)s %(message)s")
+log = logging.getLogger(__name__)
 
 # =========================================================
 # GENERAL INFORMATION
 # =========================================================
 
 def print_info():
-    VERSION= "1.02"
-    print(f"NAME : {config.FRIENDLY_NAME} \nURL_BASE:{URL_BASE} \nMEDIA ROOT : {config.MEDIA_ROOT} \nUUID:  {config.UUID} \nVersion: {VERSION}")
+    print(f"{60*'='}                            ")
+    print(f"NAME :       {config.FRIENDLY_NAME} ")
+    print(f"URL_BASE:    {URL_BASE}             ")
+    print(f"MEDIA ROOT:  {config.MEDIA_ROOT}    ")
+    print(f"UUID:        {config.UUID}          ")
+    print(f"SSDP_TTL:    {config.SSDP_TTL}      ")
+    print(f"LOGLEVEL:    {config.LOGLEVEL}      ")
+    print(f"Version:     {VERSION}              ")
+
     count = 0
     for root, dirs, files in os.walk(config.MEDIA_ROOT):
         for name in files:
             if name.lower().endswith((".mp3", ".m4a", ".flac", ".wav",".pls",".m3u")):
                 count += 1 
-    print(f"Number of files available: {count}")
+    print(f"Nr Files:    {count}")
     print(60*"=")
 
 
@@ -71,14 +85,14 @@ FILE_TYPES = {
 @web.middleware
 async def log_requests(request, handler):
     if request.remote != "10.0.0.142" and request.remote != "10.0.0.144":
-        print(f"\n➡️ LOG REQUEST  from {request.remote} : {request.method} {request.raw_path} {request.path} {request.headers}")
+        log.debug(f"\nLOG REQUEST  from {request.remote} : {request.method} {request.raw_path} {request.path} {request.headers}")
     try:
         response = await handler(request)
         if request.remote != "10.0.0.142" and request.remote != "10.0.0.144":
-            print(f"\n⬅️ LOG RESPONSE from {request.remote} : {response.status}")
+            log.debug(f"\nLOG RESPONSE from {request.remote} : {response.status}")
         return response
     except Exception as e:
-        print("❌ ERROR:", e)
+        log.error("ERROR:", e)
         raise
 
 
@@ -131,7 +145,7 @@ def ssdp_notify():
             "",
             ""
         ])
-#       print(msg)
+#       log.debug(msg)
 
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
         sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 2)
@@ -146,9 +160,9 @@ def ssdp_loop():
     import datetime
     while True:
         ssdp_notify()
-        print("📡 SSDP NOTIFY sent")
+        log.debug("SSDP NOTIFY sent")
         now = datetime.datetime.now()
-        print(now.strftime("%Y-%m-%d %H:%M:%S"))
+        log.debug(now.strftime("%Y-%m-%d %H:%M:%S"))
         time.sleep(30)
 
 
@@ -164,7 +178,7 @@ def ssdp_listener():
     mreq = socket.inet_aton(SSDP_ADDR) + socket.inet_aton("0.0.0.0")
     sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
 
-    print("SSDP running")
+    log.info("SSDP running")
 
     while True:
         data, addr = sock.recvfrom(2048)
@@ -173,8 +187,8 @@ def ssdp_listener():
         if "M-SEARCH" not in msg:
             continue
         if addr[0] != "10.0.0.142" and addr[0] != "10.0.0.144" :
-            print("📥 M-SEARCH from", addr)
-#           print(msg)
+            log.debug(f"M-SEARCH from {addr}")
+            log.debug(msg)
 
         st = "upnp:rootdevice"
         for line in msg.splitlines():
@@ -193,8 +207,8 @@ def ssdp_listener():
             ""
         ])
         if addr[0] != "10.0.0.142" and addr[0] != "10.0.0.144" :
-            print("📥 M-SEARCH to ", addr)
-#           print(reply)
+            log.debug(f"M-SEARCH to {addr}")
+            log.debug(reply)
 
         sock.sendto(reply.encode(), addr)
 
@@ -248,7 +262,7 @@ def parse_browse(xml_body):
         return object_id, browse_flag , start_index , requested
 
     except Exception as e:
-        print("PARSE ERROR:", e)
+        log.warning(f"PARSE ERROR: {e}")
         return None, None
 
 
@@ -257,28 +271,25 @@ def parse_browse(xml_body):
 #============================================================
 
 async def catch_all(request):
-    print("CATCH ALL")
-    print("METHOD:", request.method)
-    print("PATH:", request.path)
-    print("HEADERS:", dict(request.headers))
+    log.warning(f"CATCH ALL \nMETHOD: {request.method} \nPATH: {request.path} \nHEADERS { dict(request.headers)} ")
     body = await request.text()
-    print("BODY:", body[:500])
+    log.warning(f"BODY: {body[:500]}")
 
 
     soapaction = request.headers.get("SOAPACTION", "")
 
-    print("SOAPACTION:", soapaction)
+    log.warning(f"SOAPACTION: {soapaction}")
 
     if "ContentDirectory:1" in soapaction:
-        print("Dispatching to cds_control")
+        log.warning("Dispatching to cds_control")
         return await cds_control(request)
 
     elif "ConnectionManager:1" in soapaction:
-        print("Dispatching to cms_control")
+        log.warning("Dispatching to cms_control")
         return await cms_control(request)
 
     elif "X_MS_MediaReceiverRegistrar:1" in soapaction:
-        print("Dispatching to msr_control")
+        log.warning("Dispatching to msr_control")
         return await msr_control(request)
 
     return web.Response(status=404)
@@ -289,7 +300,7 @@ async def catch_all(request):
 # =========================================================
 
 async def description(request):
-    print("📄DESCRIPTION.XML requested",request)
+    log.debug(f"DESCRIPTION.XML requested {request}")
     xml = f"""<?xml version="1.0"?>
 <root xmlns="urn:schemas-upnp-org:device-1-0">
    <specVersion>
@@ -371,7 +382,7 @@ async def description(request):
 # ==================================================
 
 async def msr_xml(request):
-    print("📄MSR.XML requested",request)
+    log.debug(f"MSR.XML requested {request}")
     xml = """<?xml version="1.0" encoding="utf-8"?>
 <scpd>
    <specVersion>
@@ -468,7 +479,7 @@ async def msr_xml(request):
 #=========================================================
 
 async def msr_control(request):
-    print("📄MSR_CONTROL requested",request)
+    log.debug(f"MSR_CONTROL requested {request}")
     body = await request.text()
     xml = """<?xml version="1.0"?>
 <s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
@@ -486,7 +497,7 @@ async def msr_control(request):
 #=========================================================
             
 async def msr_event(request):
-    print("MSR EVENT ")
+    log.debug("MSR EVENT ")
     sid = "uuid:" + config.UUID
     headers = {
         "SID": sid,
@@ -500,7 +511,7 @@ async def msr_event(request):
 # ==================================================
 
 async def cms_xml(request):
-    print("📄CMS.XML requested",request)
+    log.debug(f"CMS.XML requested {request}")
     xml = """<?xml version="1.0" encoding="utf-8"?>
 <scpd xmlns="urn:schemas-upnp-org:service-1-0">
    <specVersion>
@@ -641,9 +652,9 @@ async def cms_xml(request):
 #=========================================================
 
 async def cms_control(request):
-    print("CMS CONTROL")
+    log.debug("CMS CONTROL")
     body = await request.text()
-    print(body)
+    log.debug(body)
     return web.Response(text="soap_ok",
                         content_type="text/xml")
 
@@ -653,7 +664,7 @@ async def cms_control(request):
 #=========================================================
 
 async def cms_event(request):
-    print("CMS EVENT ")
+    log.debug("CMS EVENT ")
     sid = "uuid:" + config.UUID
     headers = {
         "SID": sid,
@@ -667,7 +678,7 @@ async def cms_event(request):
 # =========================================================
 
 async def cds_xml(request):
-    print("📄CDS.XML requested",request)
+    log.debug(f"CDS.XML requested {request}")
     xml = f"""<?xml version="1.0" encoding="utf-8"?>
 <scpd xmlns="urn:schemas-upnp-org:service-1-0">
    <specVersion>
@@ -889,14 +900,15 @@ def list_directory(object_id):
         path = os.path.dirname (path) 
         object_id = os.path.dirname (object_id )  
     items = []
-#   print ("sorted list ",sortedlist)
-    print ("Listed directory length:",len(sortedlist))
+    log.info (f"Directory  {path}")
+    log.debug(f"sorted list {sortedlist}")
+    log.info (f"Listed directory length: {len(sortedlist)}")
 
     try:
         for entry in sortedlist:
             full = os.path.join(path, entry)
             child_id = f"{object_id}/{entry}" if object_id not in ("0", None, "") else entry
-#           print("FULL:" , full , "ENTRY:", entry, "ISFILE:", os.path.isfile(full), "ISDIR:", os.path.isdir(full))
+            log.debug(f"FULL:  {full} ENTRY: {entry} ISFILE: {os.path.isfile(full)} ISDIR: {os.path.isdir(full)}")
 
             # ------------------------
             # DIRECTORY
@@ -924,12 +936,12 @@ def list_directory(object_id):
                         "mime"  : mime
                     })
                 except KeyError:
-                    print ("UNKNOWN FILE TYPE: "+ full)
+                    log.warning("UNKNOWN FILE TYPE: "+ full)
             else:
-                print ("NOT A FILE OR DIRECTORY?")
+                log.error("NOT A FILE OR DIRECTORY?")
     except Exception as e:
-        print("Filesystem error:", e)
-    print ("Valid items",len(items))
+        log.error("Filesystem error:"+ e)
+    log.info(f"Valid items {len(items)}")
     return items
 
 
@@ -965,19 +977,22 @@ def build_didl(items, parent_id, request_host):
         # FOLDER
         # ------------------------
         if it_class == FOLDER:
-            print("RESURL Directory ",res_url)
+            log.debug(f"RESURL Directory {res_url}")
             child_count = len(os.listdir(it["file"]))
-            xml += f""" <container id="{it_id}" parentID="{safe_parent_id}" restricted="0" childCount="{child_count}">
-                           <dc:title>{it_title}</dc:title>
-                           <upnp:class>{it_class}</upnp:class>
-                        </container> """
+            xml += f"""   <container id="{it_id}" parentID="{safe_parent_id}" restricted="0" childCount="{child_count}">
+      <dc:title>{it_title}</dc:title>
+      <upnp:class>{it_class}</upnp:class>
+   </container> 
+"""
 
         # ------------------------
         # FILE
         # ------------------------
         elif it_class in (MUSIC, PLAYLIST, PHOTO):
-            print("RESURL FILE   ",res_url)
+            log.debug(f"RESURL FILE {res_url}")
 
+            ins_size = ""
+            ins_tags = ""
             if it_class == MUSIC:
                 from mutagen.easyid3 import EasyID3
                 from mutagen.id3 import ID3NoHeaderError
@@ -991,22 +1006,23 @@ def build_didl(items, parent_id, request_host):
                     album  = xml_escape(audio.get("album",  [""])[0])
                 except ID3NoHeaderError:
                     pass
-                ins_size = f""" size="{os.path.getsize(it['file'])} " """ 
-                ins_tags = f""" <upnp:title>{title}</upnp:title>
-                                <upnp:artist>{artist}</upnp:artist>
-                                <upnp:album>{album}</upnp:album> """
+                ins_size = f""" size="{os.path.getsize(it['file'])}" """ 
+                ins_tags = f"""<upnp:title>{title}</upnp:title>
+      <upnp:artist>{artist}</upnp:artist>
+      <upnp:album>{album}</upnp:album> """
 
-            xml += f""" <item id="{it_id}" parentID="{safe_parent_id}" restricted="1">
-                           <dc:title>{it_title}</dc:title>
-                           <upnp:class>{it_class}</upnp:class>
-                           {ins_tags}
-                           <res protocolInfo="http-get:*:{it['mime']}:*" {ins_size} >{res_url}</res>
-                        </item> """
+            xml += f"""   <item id="{it_id}" parentID="{safe_parent_id}" restricted="1">
+      <dc:title>{it_title}</dc:title>
+      <upnp:class>{it_class}</upnp:class>
+      {ins_tags}
+      <res protocolInfo="http-get:*:{it['mime']}:*" {ins_size}>{res_url}</res>
+   </item> 
+"""
         else:
-            print ( "THIS SHOULD NOT HAPPEN")
+            log.error( "THIS SHOULD NOT HAPPEN")
 
     xml += "</DIDL-Lite>"
-#   print (xml)
+    log.debug("DIDL XML\n"+xml)
     return xml
 
 
@@ -1015,7 +1031,7 @@ def build_didl(items, parent_id, request_host):
 # ---------------------------------------------------------
 
 async def cds_control_getsearch(request,body):
-    print("CDS CONTROL GETSEARCH")
+    log.debug("CDS CONTROL GETSEARCH")
     soap = """<?xml version="1.0"?>
 <s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
   <s:Body>
@@ -1029,7 +1045,7 @@ async def cds_control_getsearch(request,body):
     return web.Response(text=soap, content_type="text/xml")
 
 async def cds_control_getsort(request, body):
-    print("CDS CONTROL GETSORT")
+    log.debug("CDS CONTROL GETSORT")
     soap = """<?xml version="1.0"?>
 <s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
   <s:Body>
@@ -1043,16 +1059,16 @@ async def cds_control_getsort(request, body):
     return web.Response(text=soap, content_type="text/xml")
 
 async def cds_control_browse(request, body):  
-    print("CDS CONTROL BROWSE")
+    log.debug("CDS CONTROL BROWSE")
     object_id, browse_flag , start_index , requested = parse_browse(body)
     request_host = request.host
-    print(f"Request host:{request_host} , Object_id: {object_id} , start_index: {start_index} , requested: {requested}, Browseflag:  { browse_flag}" )
+    log.debug(f"Request host:{request_host} , Object_id: {object_id} , start_index: {start_index} , requested: {requested}, Browseflag:  { browse_flag}" )
     items = list_directory(object_id)
     total_matches = len(items)
     if start_index != None and requested != None:
          items = items [start_index : start_index + requested]
     didl = build_didl(items, object_id, request.host)
-    print("Returned items:", len(items))
+    log.info(f"Returned items: {len(items)}")
     safe_didl = html.escape(didl)
     number_returned = len(items)
 
@@ -1089,10 +1105,10 @@ async def cds_control_browse(request, body):
     )
 
 async def cds_control(request):
-    print("CDS CONTROL")
+    log.debug("CDS CONTROL")
     body = await request.text()
     action = request.headers.get("SOAPACTION")
-    print ("ACTION", action)
+    log.debug(f"ACTION {action}")
     if "Browse" in action:
         return await cds_control_browse(request,body)
     elif "GetSearchCapabilities" in action:
@@ -1106,7 +1122,7 @@ async def cds_control(request):
 # =========================================================
 """
 async def cds_event(request):
-    print("CDS EVENT:", request.method)
+    log.debug(f"CDS EVENT: {request.method}")
 
     return web.Response(
         status=200,
@@ -1119,37 +1135,33 @@ async def cds_event(request):
 subscriptions = {}
 
 async def cds_event(request):
-    print("CDS EVENT")
-#   print("METHOD:", request.method)
-#   print("PATH:", request.path)
-#   print("HEADERS:", dict(request.headers))
+    log.debug("CDS EVENT")
     body = await request.text()
-#   print("BODY:", body[:500])
     sid  = request.headers.get("SID")
-    print ("SID ", sid)
+    log.debug(f"SID {sid}")
 
     for i in subscriptions:
-        print ("SUBSCRIPTIONS ", i,  subscriptions[i])
+        log.debug(f"SUBSCRIPTIONS { i}  {subscriptions[i]}")
     now = time.time()
     for i in list(subscriptions):
         if subscriptions[i]["expires"] < now:
-            print ("EXPIRED SUBSCRIPTION DELETED ", i )
+            log.debug(f"EXPIRED SUBSCRIPTION DELETED {i}" )
             del subscriptions[i]
     if request.method == "UNSUBSCRIBE":
         sid = request.headers.get("SID")
 
         if sid in subscriptions:
             del subscriptions[sid]
-            print ( "UNSUBSCRIBE" , sid)
+            log.debug(f"UNSUBSCRIBE {sid}")
         return web.Response(status=200)
     elif request.method == "SUBSCRIBE":
         if sid:
             if sid not in subscriptions:
-                print ("SUBSCRIPTION ERROR" , sid , request.method)
+                log.debug(f"SUBSCRIPTION ERROR {sid}  {request.method}")
                 return web.Response(status=412)
 
             subscriptions[sid]["expires"] = time.time() + 1800
-            print ("RENEWAL ",sid )
+            log.debug(f"RENEWAL {sid}" )
             return web.Response(
                 status=200,
                 headers={
@@ -1163,7 +1175,7 @@ async def cds_event(request):
             "callback": request.headers.get("CALLBACK"),
             "expires": time.time() + 1800
         }
-        print ("NEW SUBSCRIPTION ",sid )
+        log.debug(f"NEW SUBSCRIPTION {sid}" )
         return web.Response(
             status=200,
             headers={
@@ -1180,7 +1192,7 @@ async def mmmedia_handler(request):
     rel_path = request.match_info["path"]
     full_path = os.path.join(config.MEDIA_ROOT, rel_path)
 
-    print("STREAM:", full_path)
+    log.info(f"STREAM: { full_path}")
 
     if not os.path.exists(full_path):
         return web.Response(status=404)
@@ -1196,7 +1208,7 @@ async def mmedia_handler(request):
     rel_path = request.match_info["path"]
     full_path = os.path.join(config.MEDIA_ROOT, rel_path)
 
-    print("Streaming:", full_path)
+    log.info(f"Streaming: { full_path}")
 
     if not os.path.exists(full_path):
         return web.Response(status=404)
@@ -1208,13 +1220,13 @@ async def media_handler(request):
     rel_path = request.match_info["path"]
     full_path = os.path.join(config.MEDIA_ROOT, rel_path)
 
-    print("STREAM:", full_path)
+    log.info("STREAM:"+ full_path)
 
     if not os.path.exists(full_path):
         return web.Response(status=404)
 
     range_header = request.headers.get("Range")
-    print ("RANGE HEADER" , range_header)
+    log.info(f"RANGE HEADER {range_header}")
 
     if range_header:
         start = int(range_header.replace("bytes=", "").split("-")[0])
@@ -1223,7 +1235,7 @@ async def media_handler(request):
         f.seek(start)
 
         data = f.read()
-        print ("LENGHT" , len (data))
+        log.info(f"LENGHT { len (data)}")
 
         return web.Response(
             status=206,
@@ -1294,7 +1306,7 @@ def run():
     app.router.add_get("/ushareng.png"   , icon_handler)    
     app.router.add_get("/favicon.ico"    , icon_handler)
     app.router.add_get("/media/{path:.*}", media_handler)
-    web.run_app(app, host="0.0.0.0", port=config.HTTP_PORT)
+    web.run_app(app, host="0.0.0.0", port=config.HTTP_PORT,access_log=None,print=None)
 
 if __name__ == "__main__":
     print_info()
