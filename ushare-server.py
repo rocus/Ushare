@@ -88,12 +88,10 @@ IGNORED_FILES = ( "Thumbs.db", "desktop.ini", "indexmarks" , ".txt" , ".doc" )
 
 @web.middleware
 async def log_requests(request, handler):
-    if request.remote != "10.0.0.142" and request.remote != "10.0.0.144":
-        log.debug(f"\nLOG REQUEST  from {request.remote} : {request.method} {request.raw_path} {request.path} {request.headers}")
+    log.debug(f"\nLOG REQUEST  from {request.remote} : {request.method} {request.raw_path} {request.path} {request.headers}")
     try:
         response = await handler(request)
-        if request.remote != "10.0.0.142" and request.remote != "10.0.0.144":
-            log.debug(f"\nLOG RESPONSE from {request.remote} : {response.status}")
+        log.debug(f"\nLOG RESPONSE from {request.remote} : {response.status}")
         return response
     except Exception as e:
         log.error("ERROR:", e)
@@ -190,9 +188,8 @@ def ssdp_listener():
 
         if "M-SEARCH" not in msg:
             continue
-        if addr[0] != "10.0.0.142" and addr[0] != "10.0.0.144" :
-            log.debug(f"M-SEARCH from {addr}")
-            log.debug(msg)
+        log.debug(f"M-SEARCH from {addr}")
+        log.debug(msg)
 
         st = "upnp:rootdevice"
         for line in msg.splitlines():
@@ -210,9 +207,8 @@ def ssdp_listener():
             "",
             ""
         ])
-        if addr[0] != "10.0.0.142" and addr[0] != "10.0.0.144" :
-            log.debug(f"M-SEARCH to {addr}")
-            log.debug(reply)
+        log.debug(f"M-SEARCH to {addr}")
+        log.debug(reply)
 
         sock.sendto(reply.encode(), addr)
 
