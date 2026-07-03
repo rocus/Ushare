@@ -26,7 +26,7 @@ SSDP_ADDR     = "239.255.255.250"
 SSDP_PORT     = 1900
 URL_BASE      = f"http://{config.SERVER_IP}:{config.HTTP_PORT}/"
 LOCATION      = f"{URL_BASE}description.xml"
-VERSION       = "1.02"
+VERSION       = "1.05"
 
 
 logging.basicConfig( level=getattr(logging, config.LOGLEVEL), format="%(levelname)s %(message)s")
@@ -49,7 +49,7 @@ def print_info():
     count = 0
     for root, dirs, files in os.walk(config.MEDIA_ROOT):
         for name in files:
-            if name.lower().endswith((".mp3", ".m4a", ".flac", ".wav",".pls",".m3u")):
+            if name.lower().endswith((".mp3", ".wma" , ".flac", ".wav" , "ogg" ,".pls",".m3u" , "m3u8" )):
                 count += 1 
     print(f"Nr Files:    {count}")
     print(60*"=")
@@ -65,18 +65,22 @@ PLAYLIST = "object.item.playlistItem"
 FOLDER   = "object.container.storageFolder"
 
 FILE_TYPES = {
-    ".mp3" : ("audio/mpeg"    , MUSIC   ),
-    ".flac": ("audio/flac"    , MUSIC   ),
-    ".wav" : ("audio/wav"     , MUSIC   ),
-    ".ogg" : ("audio/ogg"     , MUSIC   ),
-    ".wma" : ("audio/x-ms-wma", MUSIC   ),
-    ".pls" : ("audio/x-scpls" , PLAYLIST),
-    ".m3u" : ("audio/mpegurl" , PLAYLIST),
-    ".jpg" : ("image/jpeg"    , PHOTO   ),
-    ".jpeg": ("image/jpeg"    , PHOTO   ),
-    ".png" : ("image/png"     , PHOTO   )
+    ".mp3" : ("audio/mpeg"      , MUSIC   ),
+    ".flac": ("audio/flac"      , MUSIC   ),
+    ".wav" : ("audio/wav"       , MUSIC   ),
+    ".ogg" : ("audio/ogg"       , MUSIC   ),
+    ".wma" : ("audio/x-ms-wma"  , MUSIC   ),
+    ".pls" : ("audio/x-scpls"   , PLAYLIST),
+    ".m3u" : ("audio/x-mpegurl" , PLAYLIST),
+    ".m3u8": ("audio/x-mpegurl" , PLAYLIST),
+    ".jpg" : ("image/jpeg"      , PHOTO   ),
+    ".jpeg": ("image/jpeg"      , PHOTO   ),
+    ".bmp" : ("image/bmp"       , PHOTO   ),
+    ".gif" : ("image/gif"       , PHOTO   ),
+    ".png" : ("image/png"       , PHOTO   )
 }
 
+IGNORED_FILES = ( "Thumbs.db", "desktop.ini", "indexmarks" , ".txt" , ".doc" )
 
 # =========================================================
 # GLOBAL REQUEST LOGGING
@@ -923,7 +927,8 @@ def list_directory(object_id):
             # ------------------------
             # FILE 
             # ------------------------
-
+            elif full.endswith ( IGNORED_FILES ):
+                pass
             elif os.path.isfile(full):
                 ext  = os.path.splitext(entry)[1].lower()
                 try:
@@ -938,7 +943,7 @@ def list_directory(object_id):
                 except KeyError:
                     log.warning("UNKNOWN FILE TYPE: "+ full)
             else:
-                log.error("NOT A FILE OR DIRECTORY?")
+                log.error("NOT A FILE OR DIRECTORY?" + full)
     except Exception as e:
         log.error("Filesystem error:"+ e)
     log.info(f"Valid items {len(items)}")
