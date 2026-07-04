@@ -26,7 +26,7 @@ SSDP_ADDR     = "239.255.255.250"
 SSDP_PORT     = 1900
 URL_BASE      = f"http://{config.SERVER_IP}:{config.HTTP_PORT}/"
 LOCATION      = f"{URL_BASE}description.xml"
-VERSION       = "1.06"
+VERSION       = "1.07"
 
 
 logging.basicConfig( level=getattr(logging, config.LOGLEVEL), format="%(levelname)s %(message)s")
@@ -56,7 +56,7 @@ def print_info():
 
 
 # =========================================================
-# FILETYPE DEFINITIONS
+# FILETYPE DEFINITIONS AND UPnP DEFINITIONS
 # =========================================================
 
 MUSIC    = "object.item.audioItem.musicTrack"
@@ -83,7 +83,7 @@ FILE_TYPES = {
 IGNORED_FILES = ( "Thumbs.db", "desktop.ini", "indexmarks" , ".txt" , ".doc" )
 
 # =========================================================
-# GLOBAL REQUEST LOGGING
+# GLOBAL REQUEST LOGGING (IF NEEDED)
 # =========================================================
 
 @web.middleware
@@ -483,11 +483,11 @@ async def msr_control(request):
     body = await request.text()
     xml = """<?xml version="1.0"?>
 <s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
-<s:Body>
-<u:IsAuthorizedResponse xmlns:u="urn:microsoft.com:service:X_MS_MediaReceiverRegistrar:1">
-<Result>1</Result>      
-</u:IsAuthorizedResponse>
-</s:Body>
+   <s:Body>
+      <u:IsAuthorizedResponse xmlns:u="urn:microsoft.com:service:X_MS_MediaReceiverRegistrar:1">
+         <Result>1</Result>      
+      </u:IsAuthorizedResponse>
+   </s:Body>
 </s:Envelope>"""
     return web.Response( text=xml, content_type="text/xml") 
 
@@ -1189,34 +1189,6 @@ async def cds_event(request):
 # MEDIA HANDLER
 # =========================================================
 
-async def mmmedia_handler(request):
-    rel_path = request.match_info["path"]
-    full_path = os.path.join(config.MEDIA_ROOT, rel_path)
-
-    log.info(f"STREAM: { full_path}")
-
-    if not os.path.exists(full_path):
-        return web.Response(status=404)
-
-    return web.FileResponse(
-        full_path,
-        headers={
-            "Content-Type": "audio/mpeg",
-        },
-    )
-
-async def mmedia_handler(request):
-    rel_path = request.match_info["path"]
-    full_path = os.path.join(config.MEDIA_ROOT, rel_path)
-
-    log.info(f"Streaming: { full_path}")
-
-    if not os.path.exists(full_path):
-        return web.Response(status=404)
-
-    return web.FileResponse(full_path)
-
-
 async def media_handler(request):
     rel_path = request.match_info["path"]
     full_path = os.path.join(config.MEDIA_ROOT, rel_path)
@@ -1256,6 +1228,7 @@ async def media_handler(request):
             "Accept-Ranges": "bytes",
         },
     )
+
 
 # =========================================================
 # ICON HANDLER
