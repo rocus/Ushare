@@ -38,7 +38,7 @@ In the beginning of the development of this program there seemed something wrong
 I implemented a CDS_EVENT routine complete with subscription, timeout and unsubscribe facilities. This CDS_EVENT does not do anything: most clients don't use events.
 
 
-The Philips sla5520 has a bug that removes servers after some time from it's screen. Strangely that does not happen on all sla5520's that I use but it happens quite often and mostly after an hour or so. I found a solution for this bug in the form of a SSDP timeout constant. Normally you would set that for example to 1800 seconds but I set that to 64000 seconds (Completely legal according to UPnP rules). So the servers (in my case my ushare music and radio servers/lines) disappear after almost one day. A reboot is then necessary. It is quite common that UPnP clients find servers only during boot (and not later).
+The Philips sla5520 has maybe a bug that removes servers after some time from it's screen. That does not happen on all sla5520's in my network but it happens quite often and mostly after an hour or so. The root cause may also be strange behavour of wifi routers. I found a solution for this problem in the form of a SSDP timeout constant. Normally you would set that for example to 1800 seconds but I set that to 64000 seconds (Completely legal according to UPnP rules). So the servers (in my case my ushare music and radio servers/lines) disappear after almost one day. A reboot is then necessary. It is quite common that UPnP clients find servers only during boot (and not later).
 
 
 I gave my server an icon in software. You can change the software for your icon. You can do that in python:
