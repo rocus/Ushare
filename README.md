@@ -18,26 +18,31 @@ I made my ushare for the most common filetypes for music. It is quite easy to ad
 
 I used ushare mainly for the serving of radio stations to my Philips SLA5520 upnp clients. These devices (end-of-live long ago) work good with any UPnP music (mp3) streamer but use a Philips backend database (on a Philips fileserver) for radiostations (very akward to save radiostations). Now two instances of my ushare like imp-lementation (on my raspberry pi 4 NAS) serve music and radio. My radio tree on my Nas is thus quickly and easily available. My sla5520 has a 4 line screen: internet radio , favorites and two lines for your own UPnP servers in my case Music and Radio. (the two instances of my ushare server.
 
+
 I use two special modules normally not standard installed: aiohttp (for asynchrone network IO) and mutagen (for id3 tags). It is wise to install these two modules in a virtual environment with pip. The whole program consists off one python file. 
+
 
 With parameters on the command line you can adapt the ushare program:
 
 python3 ushare.py -p 49153 -o 10.0.0.120 -n Music -r /media/music -d WARNING
 
 Everytime you start the program you get a new random uuid but you can also give an uuid on the command line.
-
 python3 ushare.py -h shows a short help.
 
-In the beginning of the development of this program there seemed something wrong with the description.xml file. The services available (3) were not correctly called and as remedy I made a routine catch_all to catch all calls to the server and direct them to the appropriate software routines. Later this problem solved itself (the reason is unknown) but I kept this catch_all function but it is hardly ever called. Once because some client called a flavico.ico although that is not my implemented icon.  
 
-I implemented a CDS_EVENT routine complete with subscription, timeout and unsubscribe facilities. This cds_event is not used: most clients don't use it.
+In the beginning of the development of this program there seemed something wrong with the description.xml file. The services available (3) were not correctly called and as remedy I made a routine catch_all to catch all calls to the server and direct them to the appropriate software routines. Later this problem solved itself (the reason is unknown) but I kept this catch_all function but it is hardly ever called. Once because some client called a flavico.ico although that is not the name of my icon as mentioned in the description.xml file.  
 
-The Philips sla5520 has a bug that removes servers after some time from it's screen. Strangely that does not happen on all sla5520's that I use but it happens quite often and mostly after an hour or so. I found a solution for this bug in the form of a SSDP timeout constant. Normally you would set that for example to 1800 seconds but I set that to 64000 seconds (Completely legal according to UPnP rules). So the servers (in my case my ushare music and radio servers/lines) disappear after one day. A reboot is then necessary. It is quite common that UPnP clients find servers only immediately after boot (and not later).
+
+I implemented a CDS_EVENT routine complete with subscription, timeout and unsubscribe facilities. This cds_event does not do anything: most clients don't use it.
+
+
+The Philips sla5520 has a bug that removes servers after some time from it's screen. Strangely that does not happen on all sla5520's that I use but it happens quite often and mostly after an hour or so. I found a solution for this bug in the form of a SSDP timeout constant. Normally you would set that for example to 1800 seconds but I set that to 64000 seconds (Completely legal according to UPnP rules). So the servers (in my case my ushare music and radio servers/lines) disappear after almost one day. A reboot is then necessary. It is quite common that UPnP clients find servers only immediately after boot (and not later).
+
 
 I gave myserver an icon in software. You can change the software for your icon. You can do that in python:
 
 import base64
-with open("icon.png", "rb") as f:
+with open("your_icon.png", "rb") as f:
     print(base64.b64encode(f.read()).decode())
 
-The text you get can be pasted in the program near the ICON HANDLER. Your description.xml must match the icon_handler call mechanism.
+The text you get can be pasted in the program near the ICON HANDLER.
