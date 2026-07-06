@@ -26,7 +26,7 @@ SSDP_ADDR     = "239.255.255.250"
 SSDP_PORT     = 1900
 URL_BASE      = f"http://{config.SERVER_IP}:{config.HTTP_PORT}/"
 LOCATION      = f"{URL_BASE}description.xml"
-VERSION       = "1.07"
+VERSION       = "1.08"
 
 
 logging.basicConfig( level=getattr(logging, config.LOGLEVEL), format="%(levelname)s %(message)s")
@@ -102,7 +102,7 @@ async def log_requests(request, handler):
 # SSDP NOTIFY
 # ===============================================================
 
-def sssdp_notify():
+def ssdp_notify():
 
     msg = "\r\n".join([
         "NOTIFY * HTTP/1.1",
@@ -124,7 +124,7 @@ def sssdp_notify():
     sock.sendto(msg.encode(), (SSDP_ADDR, SSDP_PORT))
     sock.close()
 
-def ssdp_notify():
+def ssssdp_notify():
 
     notifies = [
         ("upnp:rootdevice", f"uuid:{config.UUID}::upnp:rootdevice"),
