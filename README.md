@@ -1,6 +1,6 @@
 **What is ushare?**
 
-Ushare is a rather old UPnP server that is no longer maintained. I installed it 15 years ago on a raspberry pi and it still functions quite well, but it is no longer available on newer OS'es. It is simple directory based and has no database like functions: you can not sort or search its results but that is no problem if you have a neat directory structure for your music files.
+Ushare is a rather old UPnP server that is no longer maintained. I installed it 10 years ago on a raspberry pi and it still functions quite well, but it is no longer available on newer OS'es. It is simple directory based and has no database like functions: you can not sort or search its results but that is no problem if you have a neat directory structure for your music files.
 
 
 **What advantages has Ushare over other UPnP servers?**
@@ -27,7 +27,9 @@ I use two special modules normally not standard installed: aiohttp (for asynchro
 
 
 With parameters on the command line you can adapt the ushare program:
+
 python3 ushare.py -p 49153 -o 10.0.0.120 -n Music -r /media/music -d WARNING
+
 Everytime you start the program you get a new random uuid but you can also give an uuid on the command line so clients can cache your server data.
 python3 ushare.py -h shows a short help.
 
@@ -44,7 +46,8 @@ The Philips sla5520 has maybe a bug that removes servers after some time from it
 I gave my server an icon in software. You can change the software for your icon. You can do that in python:
 
 import base64
+
 with open("your_icon.png", "rb") as f:
-    print(base64.b64encode(f.read()).decode())
+      print(base64.b64encode(f.read()).decode())
 
 The text you get can be pasted in the program near the ICON HANDLER.
