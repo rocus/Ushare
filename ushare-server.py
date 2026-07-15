@@ -2,6 +2,8 @@ import logging
 import uuid
 import html
 import os
+import errno
+import sys
 import socket
 import time
 import threading
@@ -26,7 +28,7 @@ SSDP_ADDR     = "239.255.255.250"
 SSDP_PORT     = 1900
 URL_BASE      = f"http://{config.SERVER_IP}:{config.HTTP_PORT}/"
 LOCATION      = f"{URL_BASE}description.xml"
-VERSION       = "1.14"
+VERSION       = "1.15"
 
 
 logging.basicConfig( level=getattr(logging, config.LOGLEVEL), format="%(levelname)s %(message)s")
@@ -1298,7 +1300,13 @@ def run():
     app.router.add_get("/ushareng.png"   , icon_handler)    
     app.router.add_get("/favicon.ico"    , icon_handler)
     app.router.add_get("/media/{path:.*}", media_handler)
-    web.run_app(app, host="0.0.0.0", port=config.HTTP_PORT,access_log=None,print=None)
+    try:
+        web.run_app(app, host="0.0.0.0", port=config.HTTP_PORT,access_log=None,print=None)
+    except OSError as err:
+        if err.errno == errno.EADDRINUSE:
+            print(f"ERROR: Port {config.HTTP_PORT} is already in use. Is another ushare server already running?")
+            sys.exit(1)
+        raise
 
 if __name__ == "__main__":
     print_info()
