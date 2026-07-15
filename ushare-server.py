@@ -26,7 +26,7 @@ SSDP_ADDR     = "239.255.255.250"
 SSDP_PORT     = 1900
 URL_BASE      = f"http://{config.SERVER_IP}:{config.HTTP_PORT}/"
 LOCATION      = f"{URL_BASE}description.xml"
-VERSION       = "1.09"
+VERSION       = "1.11"
 
 
 logging.basicConfig( level=getattr(logging, config.LOGLEVEL), format="%(levelname)s %(message)s")
@@ -49,7 +49,7 @@ def print_info():
     count = 0
     for root, dirs, files in os.walk(config.MEDIA_ROOT):
         for name in files:
-            if name.lower().endswith((".mp3", ".wma" , ".flac", ".wav" , "ogg" ,".pls",".m3u" , "m3u8" )):
+            if name.lower().endswith((".mp3",".wma",".flac",".wav","ogg",".pls",".m3u","m3u8","mkv","avi","mp4","mpeg","mpg","webm","ts" )):
                 count += 1 
     print(f"Nr Files:    {count}")
     print(60*"=")
@@ -62,25 +62,38 @@ def print_info():
 MUSIC    = "object.item.audioItem.musicTrack"
 PHOTO    = "object.item.imageItem.photo"
 PLAYLIST = "object.item.playlistItem"
+VIDEO    = "object.item.videoItem.movie"
+SUBS     = "object.item.textItem"
 FOLDER   = "object.container.storageFolder"
 
 FILE_TYPES = {
-    ".mp3" : ("audio/mpeg"      , MUSIC   ),
-    ".flac": ("audio/flac"      , MUSIC   ),
-    ".wav" : ("audio/wav"       , MUSIC   ),
-    ".ogg" : ("audio/ogg"       , MUSIC   ),
-    ".wma" : ("audio/x-ms-wma"  , MUSIC   ),
-    ".pls" : ("audio/x-scpls"   , PLAYLIST),
-    ".m3u" : ("audio/x-mpegurl" , PLAYLIST),
-    ".m3u8": ("audio/x-mpegurl" , PLAYLIST),
-    ".jpg" : ("image/jpeg"      , PHOTO   ),
-    ".jpeg": ("image/jpeg"      , PHOTO   ),
-    ".bmp" : ("image/bmp"       , PHOTO   ),
-    ".gif" : ("image/gif"       , PHOTO   ),
-    ".png" : ("image/png"       , PHOTO   )
+    ".mp3" : ("audio/mpeg"              , MUSIC   ),
+    ".flac": ("audio/flac"              , MUSIC   ),
+    ".wav" : ("audio/wav"               , MUSIC   ),
+    ".ogg" : ("audio/ogg"               , MUSIC   ),
+    ".wma" : ("audio/x-ms-wma"          , MUSIC   ),
+    ".pls" : ("audio/x-scpls"           , PLAYLIST),
+    ".m3u" : ("audio/x-mpegurl"         , PLAYLIST),
+    ".m3u8": ("audio/x-mpegurl"         , PLAYLIST),
+    ".jpg" : ("image/jpeg"              , PHOTO   ),
+    ".jpeg": ("image/jpeg"              , PHOTO   ),
+    ".bmp" : ("image/bmp"               , PHOTO   ),
+    ".gif" : ("image/gif"               , PHOTO   ),
+    ".png" : ("image/png"               , PHOTO   ),
+    ".avi" : ("video/x-msvideo"         , VIDEO   ),
+    ".mp4" : ("video/mp4"               , VIDEO   ),
+    ".ts"  : ("video/mp2t"              , VIDEO   ),
+    ".mpeg": ("video/mpeg"              , VIDEO   ),
+    ".mpg" : ("video/mpeg"              , VIDEO   ),
+    ".webm": ("video/webm"              , VIDEO   ),
+    ".mkv" : ("video/x-matroska"        , VIDEO   ),
+    ".sub" : ("application/octet-stream", SUBS    ),
+    ".idx" : ("text/plain"              , SUBS    ),
+    ".srt" : ("application/x-subrip"    , SUBS    )
+ 
 }
 
-IGNORED_FILES = ( "Thumbs.db", "desktop.ini", "indexmarks" , ".txt" , ".doc" )
+IGNORED_FILES = ( "Thumbs.db", "desktop.ini", "indexmarks" , ".txt" , ".doc" , ".pdf" ) 
 
 # =========================================================
 # GLOBAL REQUEST LOGGING (IF NEEDED)
@@ -989,7 +1002,7 @@ def build_didl(items, parent_id, request_host):
         # ------------------------
         # FILE
         # ------------------------
-        elif it_class in (MUSIC, PLAYLIST, PHOTO):
+        elif it_class in (MUSIC, PLAYLIST, PHOTO, VIDEO, SUBS):
             log.debug(f"RESURL FILE {res_url}")
 
             ins_size = ""
@@ -1192,18 +1205,21 @@ async def cds_event(request):
 async def media_handler(request):
     rel_path = request.match_info["path"]
     full_path = os.path.join(config.MEDIA_ROOT, rel_path)
-
-    log.info("STREAM:"+ full_path)
-
+    if os.path.isdir (full_path):
+        return web.Response(status=404)
     if not os.path.exists(full_path):
         return web.Response(status=404)
 
+    log.info("STREAM:"+ full_path)
+    file_size = os.path.getsize (full_path)
+    file_ext  = os.path.splitext(full_path)[1].lower()
+    mime_type = FILE_TYPES[file_ext][0]
+    log.info("MIME TYPE "+ mime_type)
     range_header = request.headers.get("Range")
     log.info(f"RANGE HEADER {range_header}")
 
-    if range_header:
+    if range_header and (file_size < 100000000) :
         start = int(range_header.replace("bytes=", "").split("-")[0])
-        file_size = os.path.getsize(full_path)
         f = open(full_path, "rb")
         f.seek(start)
 
@@ -1214,18 +1230,19 @@ async def media_handler(request):
             status=206,
             body=data,
             headers={
-                "Content-Type": "audio/mpeg",
+                "Content-Type"  : mime_type,
                 "Content-Length": str(len(data)),
-                "Content-Range": f"bytes {start}-{file_size-1}/{file_size}",
-                "Accept-Ranges": "bytes",
+                "Content-Range" : f"bytes {start}-{file_size-1}/{file_size}",
+                "Accept-Ranges" : "bytes",
             },
         )
 
     return web.FileResponse(
         full_path,
         headers={
-            "Content-Type": "audio/mpeg",
-            "Accept-Ranges": "bytes",
+            "Content-Type"  : mime_type,
+            "Content-Length": "",
+            "Accept-Ranges" : "bytes",
         },
     )
 
