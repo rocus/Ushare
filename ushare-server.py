@@ -82,6 +82,7 @@ FILE_TYPES = {
     ".png" : ("image/png"               , PHOTO   ),
     ".avi" : ("video/x-msvideo"         , VIDEO   ),
     ".mp4" : ("video/mp4"               , VIDEO   ),
+    ".m4v" : ("video/m4v"               , VIDEO   ),
     ".ts"  : ("video/mp2t"              , VIDEO   ),
     ".mpeg": ("video/mpeg"              , VIDEO   ),
     ".mpg" : ("video/mpeg"              , VIDEO   ),
