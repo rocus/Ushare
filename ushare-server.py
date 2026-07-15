@@ -26,7 +26,7 @@ SSDP_ADDR     = "239.255.255.250"
 SSDP_PORT     = 1900
 URL_BASE      = f"http://{config.SERVER_IP}:{config.HTTP_PORT}/"
 LOCATION      = f"{URL_BASE}description.xml"
-VERSION       = "1.11"
+VERSION       = "1.13"
 
 
 logging.basicConfig( level=getattr(logging, config.LOGLEVEL), format="%(levelname)s %(message)s")
@@ -327,9 +327,9 @@ async def description(request):
       <manufacturerURL>http://github.com/rocus/</manufacturerURL>
       <modelDescription>ushare : UPnP Media Server</modelDescription>
       <modelName>ushare</modelName>
-      <modelNumber>001</modelNumber>
+      <modelNumber>{VERSION}</modelNumber>
       <modelURL>http://github.com/rocus/ushare/</modelURL>
-      <serialNumber>USHARE-1.11</serialNumber>
+      <serialNumber>{VERSION}</serialNumber>
       <UDN>uuid:{config.UUID}</UDN>
       <presentationURL>/web/ushare.html</presentationURL>
       <iconList>
