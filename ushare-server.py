@@ -323,13 +323,13 @@ async def description(request):
    <device>
       <deviceType>urn:schemas-upnp-org:device:MediaServer:1</deviceType>
       <friendlyName>{config.FRIENDLY_NAME}</friendlyName>
-      <manufacturer>GeeXboX Team</manufacturer>
-      <manufacturerURL>http://ushare.geexbox.org/</manufacturerURL>
-      <modelDescription>GeeXboX uShare : UPnP Media Server</modelDescription>
-      <modelName>uShare</modelName>
+      <manufacturer>Rocus van Oosten</manufacturer>
+      <manufacturerURL>http://github.com/rocus/</manufacturerURL>
+      <modelDescription>ushare : UPnP Media Server</modelDescription>
+      <modelName>ushare</modelName>
       <modelNumber>001</modelNumber>
-      <modelURL>http://ushare.geexbox.org/</modelURL>
-      <serialNumber>GEEXBOX-USHARE-02</serialNumber>
+      <modelURL>http://github.com/rocus/ushare/</modelURL>
+      <serialNumber>USHARE-1.11</serialNumber>
       <UDN>uuid:{config.UUID}</UDN>
       <presentationURL>/web/ushare.html</presentationURL>
       <iconList>
