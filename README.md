@@ -2,17 +2,21 @@
 
 Ushare is a rather old UPnP server that is no longer maintained. I installed it 10 years ago on a raspberry pi and it still functions quite well, but it is no longer available on newer OS'es. It is simple directory based and has no database like functions: you can not sort or search its results but that is no problem if you have a neat directory structure for your music files.
 
+
 **What advantages has Ushare over other UPnP servers?**
 
 Apart from being simple and lightweight it has one advantage that made this project for me worthwhile: it supports radio stations (as part of playlist files). Many UPnP servers look for mp3's in a playlist file and thus refuse to play an url radio station. Other UPnP servers can serve playlist files with radio stations but can only show these playlist files in one directory or combined in one long playlist file. Another advantage of my implementation of ushare in Python is that you can modify/adapt the software to borderline compliant UPnP implementations of clients. See below.
+
 
 **How did I implement my ushare like UPnP server?**
 
 From the beginning I choose Python as my implementation language. Originally Ushare was written in C and I tried to recompile it on a more modern environment (Debian 12). Because Ushare uses upnp and dlna libraries that have changed over time and because my experience with C is very limited, I choose to implement it in Python with commonly available libraries. I did not use any code from Ushare.
 
+
 **Limitations**
 
 I origionally made my Ushare for the most common filetypes for music. Later I added video and subtitles but I think UPnP is less suitable for video. It does not do transcoding. and there are no search and sort facilities, you must have a reasonable directory structure for your music.
+
 
 **installation**
 
