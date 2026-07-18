@@ -34,6 +34,7 @@ source venv/bin/activate
 pip install aiohttp mutagen
 ```
 
+
 **Calling the program ushare-server**
 
 ```
@@ -50,6 +51,7 @@ python3 ushare-server.py --help
 ```
 
 Everytime you start the program you get the given uuid so clients may cache your server data. Your server gets a random uuid if you don't use the uuid option. 
+
 
 **Start as a service**
 
@@ -93,6 +95,7 @@ sudo systemctl start  ushare
 sudo systemctl status ushare
 ```
 
+
 **Your own icon**
 
 The icon of my ushare-server is embedded in the python program. You can modify this icon in the following way. Make a small python program:
@@ -105,6 +108,7 @@ with open("your_icon.png", "rb") as f:
 ```
 
 The text you get can be pasted in the program near the ICON HANDLER function.
+
 
 **Implementation quirks.**
 
