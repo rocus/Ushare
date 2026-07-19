@@ -8,18 +8,29 @@ import socket
 import time
 import threading
 from aiohttp import web
+
+def get_local_ip():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.connect(("8.8.8.8", 80))
+        return s.getsockname()[0]
+    finally:
+        s.close()
   
 def read_parameters():
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("-p", "--port", dest="HTTP_PORT" ,   type=int, default=49152)
-    parser.add_argument("-o", "--host", dest="SERVER_IP" ,   type=str, default="!0.0.0.100")
+    parser.add_argument("-o", "--host", dest="SERVER_IP" ,   type=str, default=None)
     parser.add_argument("-r", "--root", dest="MEDIA_ROOT",   type=str, default="/media/music")
     parser.add_argument("-n", "--name", dest="FRIENDLY_NAME",type=str, default="UshareNG")
     parser.add_argument("-u", "--uuid", dest="UUID",         type=str, default=str(uuid.uuid4()))
     parser.add_argument("-t", "--ttl" , dest="SSDP_TTL",     type=int, default=1800)
     parser.add_argument("-d", "--log" , dest="LOGLEVEL",     choices=["DEBUG", "INFO", "WARNING", "ERROR"], default="INFO")
-    return parser.parse_args()
+    args = parser.parse_args()
+    if args.SERVER_IP == None:
+       args.SERVER_IP = get_local_ip()
+    return args
 
 config = read_parameters()
 
@@ -28,7 +39,7 @@ SSDP_ADDR     = "239.255.255.250"
 SSDP_PORT     = 1900
 URL_BASE      = f"http://{config.SERVER_IP}:{config.HTTP_PORT}/"
 LOCATION      = f"{URL_BASE}description.xml"
-VERSION       = "1.15"
+VERSION       = "1.16"
 
 
 logging.basicConfig( level=getattr(logging, config.LOGLEVEL), format="%(levelname)s %(message)s")
