@@ -39,7 +39,7 @@ SSDP_ADDR     = "239.255.255.250"
 SSDP_PORT     = 1900
 URL_BASE      = f"http://{config.SERVER_IP}:{config.HTTP_PORT}/"
 LOCATION      = f"{URL_BASE}description.xml"
-VERSION       = "1.16"
+VERSION       = "1.17"   #additions for SLA5520s
 
 
 logging.basicConfig( level=getattr(logging, config.LOGLEVEL), format="%(levelname)s %(message)s")
@@ -1228,11 +1228,36 @@ async def media_handler(request):
     file_size = os.path.getsize (full_path)
     file_ext  = os.path.splitext(full_path)[1].lower()
     mime_type = FILE_TYPES[file_ext][0]
-    log.info("MIME TYPE "+ mime_type)
+
+    user_agent = request.headers.get("User-Agent", "")
+    log.info(f"USER-AGENT: {user_agent}")
+
+    # BEGIN adding for SLA5520 playlist requests:
+    # newer software: NSPlayer/10.0.0.0
+    # older software: Mozilla/4.0 (compatible)
+    sla_user_agents = ( "NSPlayer/10.0.0.0", "Mozilla/4.0 (compatible)", )
+
+    # For SLA5520 clients, change HTTPS playlist URLs to HTTP.
+    # The original playlist files remain unchanged on disk.
+    if (user_agent in sla_user_agents
+            and FILE_TYPES[file_ext][1] == PLAYLIST):
+        log.warning("SLA_FOUND and playlist requested")
+        with open(full_path, "r", encoding="utf-8", errors="replace") as f:
+            data = f.read()
+        data = data.replace("https://", "http://")
+        return web.Response(
+            body=data.encode("utf-8"),
+            headers={
+                "Content-Type": mime_type,
+                "Content-Length": str(len(data.encode("utf-8"))),
+            },
+        )
+    # END adding for SLA5520 clients
+
     range_header = request.headers.get("Range")
     log.info(f"RANGE HEADER {range_header}")
 
-    if range_header and (file_size < 100000000) :
+    if range_header and (file_size < 100000000):
         start = int(range_header.replace("bytes=", "").split("-")[0])
         f = open(full_path, "rb")
         f.seek(start)
@@ -1256,7 +1281,50 @@ async def media_handler(request):
         headers={
             "Content-Type"  : mime_type,
             "Content-Length": "",
-            "Accept-Ranges" : "bytes",
+            "Accept-Ranges": "bytes",
+        },
+    )
+
+async def oldmedia_handler(request):
+    user_agent = request.headers.get("User-Agent", "")
+    log.info(f"USER-AGENT: {user_agent}")
+    print(f"USER-AGENT: {user_agent}")
+    rel_path = request.match_info["path"]
+    full_path = os.path.join(config.MEDIA_ROOT, rel_path)
+
+    log.info("STREAM:"+ full_path)
+
+    if not os.path.exists(full_path):
+        return web.Response(status=404)
+
+    range_header = request.headers.get("Range")
+    log.info(f"RANGE HEADER {range_header}")
+
+    if range_header:
+        start = int(range_header.replace("bytes=", "").split("-")[0])
+        file_size = os.path.getsize(full_path)
+        f = open(full_path, "rb")
+        f.seek(start)
+
+        data = f.read()
+        log.info(f"LENGHT { len (data)}")
+
+        return web.Response(
+            status=206,
+            body=data,
+            headers={
+                "Content-Type": "audio/mpeg",
+                "Content-Length": str(len(data)),
+                "Content-Range": f"bytes {start}-{file_size-1}/{file_size}",
+                "Accept-Ranges": "bytes",
+            },
+        )
+
+    return web.FileResponse(
+        full_path,
+        headers={
+            "Content-Type": "audio/mpeg",
+            "Accept-Ranges": "bytes",
         },
     )
 
